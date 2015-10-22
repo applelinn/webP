@@ -84,6 +84,7 @@ public class WebProxy {
 					FileInputStream frF = new FileInputStream(f);
 					//		BufferedInputStream frFb = new BufferedInputStream (frF);
 					Scanner frS = new Scanner (f);
+					
 					File tempFile = new File("temp");
 					tempFile.delete();
 					tempFile.createNewFile();
