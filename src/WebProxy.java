@@ -9,6 +9,7 @@ public class WebProxy {
 
 	/** Socket for client connections */
 	private static ServerSocket socket;
+	
 
 	public static void main(String args[]) { //throws IOException{
 		/** Read command line arguments and start proxy */
