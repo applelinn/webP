@@ -80,25 +80,31 @@ public class WebProxy {
 			File f = new File(fileName); 
 			if (method.compareTo("POST") != 0 && f.exists()) 
 			{
+				//check if can use cache
 				try
 				{
 					// Read the file 
 					FileInputStream frF = new FileInputStream(f);
-		//dis			Scanner frS = new Scanner (f);
-					DataInputStream dis = new DataInputStream(frF);
-					DataOutputStream dos = new DataOutputStream (client.getOutputStream());
+					//		BufferedInputStream frFb = new BufferedInputStream (frF);
+					Scanner frS = new Scanner (f);
 					
+					File tempFile = new File("temp");
+					tempFile.delete();
+					tempFile.createNewFile();
+					PrintWriter toTempFile = new PrintWriter(tempFile);
+		//			PrintWriter frCache = new PrintWriter(client.getOutputStream());
+					DataOutputStream toClient = new DataOutputStream (client.getOutputStream());
+
 					//  generate appropriate respond headers ie change the cache file
 					// the date!
-					
-					//read a line as UTF 16 
-					String tempCache = dis.readLine();
-					
+					String tempCache = frS.nextLine();
 					while(!tempCache.toLowerCase().contains("date:"))
 					{
-						dos.writeUTF(tempCache);
-						tempCache = dis.readLine();
+						toTempFile.println(tempCache);
+						tempCache = frS.nextLine();
+						
 					}
+
 
 					//get the date here
 					String dateHeader[] = tempCache.split(":");
@@ -153,39 +159,37 @@ public class WebProxy {
 					toServer.flush();
 
 					//receive response from server
-					Scanner	frServer = new Scanner(server.getInputStream());
-					String tempFS = frServer.nextLine();
-					boolean isCache = false;
-					if(tempFS.contains("304"))
+		//			Scanner	frServer = new Scanner(server.getInputStream());
+					DataInputStream frServer = new DataInputStream (server.getInputStream());
+					String tempFS = frServer.readLine();
+
+					if(tempFS.contains("304")) // can use cache
 					{
-						isCache = true;
-						
-					}
-					
-					if(isCache)
-					{
-						//send the stream as usual		
-						
 						//copy stuff fr tempFile into client stream
-						Scanner frTempF = new Scanner (tempFile);
-						while(frTempF.hasNextLine())
+						DataInputStream dis = new DataInputStream(new FileInputStream(f));
+						String line = dis.readLine();
+						while(!line.toLowerCase().contains("date: "))
 						{
-							frCache.println(frTempF.nextLine());
+							// put into client output stream
+							toClient.writeChars(line);
 						}
-						frTempF.close();
-						//		Calendar cal = Calendar.getInstance();
+						
+						//	get the date
 						SimpleDateFormat sdf = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss z");
 						sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
 						tempCache = "Date: " + sdf.format(new Date());
 						
-						frCache.println(tempCache);
-						//feed into client to the end
-						while(frS.hasNextLine())
-						{
-							frCache.println(frS.nextLine());
-						}
-						frCache.flush();
-						frCache.close();
+						toClient.writeChars(tempCache);
+						
+						//feed into client till the end with buffered bytes
+						byte[] b = new byte[1000];
+						while(dis.read(b) != -1)
+							toClient.write(b, 0, 1000);
+						
+						toClient.flush();
+						toClient.close();
+						dis.close();
+
 					}
 					else
 					{
@@ -194,18 +198,20 @@ public class WebProxy {
 						f.delete();
 						f.createNewFile();
 						FileOutputStream fos = new FileOutputStream (f);
-						PrintWriter toFile = new PrintWriter(fos);
+			//			PrintWriter toFile = new PrintWriter(fos);
+						DataOutputStream toFile = new DataOutputStream (fos);
+						
 						//send scanner into client into n file toFile
-						toFile.println(tempFS);
-						frCache.println(tempFS);
-						while(frServer.hasNextLine())
+						toFile.writeChars(tempFS);
+						toClient.writeChars(tempFS);
+						byte[] b = new byte[1000];
+						while(frServer.read(b) != -1)
 						{
-							tempFS = frServer.nextLine();
-							toFile.println(tempFS);
-							frCache.println(tempFS);
+							toFile.write(b);
+							toClient.write(b);
 						}
-						frCache.flush();
-						frCache.close();
+						toClient.flush();
+						toClient.close();
 						toFile.flush();
 						toFile.close();
 					}
