@@ -11,6 +11,7 @@ public class WebProxy {
 	private static ServerSocket socket;
 	
 
+	@SuppressWarnings("deprecation")
 	public static void main(String args[]) { //throws IOException{
 		/** Read command line arguments and start proxy */
 
@@ -83,23 +84,20 @@ public class WebProxy {
 				{
 					// Read the file 
 					FileInputStream frF = new FileInputStream(f);
-					//		BufferedInputStream frFb = new BufferedInputStream (frF);
-					Scanner frS = new Scanner (f);
+		//dis			Scanner frS = new Scanner (f);
+					DataInputStream dis = new DataInputStream(frF);
+					DataOutputStream dos = new DataOutputStream (client.getOutputStream());
 					
-					File tempFile = new File("temp");
-					tempFile.delete();
-					tempFile.createNewFile();
-					PrintWriter toTempFile = new PrintWriter(tempFile);
-					PrintWriter frCache = new PrintWriter(client.getOutputStream());
-
 					//  generate appropriate respond headers ie change the cache file
 					// the date!
-					String tempCache = frS.nextLine();
+					
+					//read a line as UTF 16 
+					String tempCache = dis.readLine();
+					
 					while(!tempCache.toLowerCase().contains("date:"))
 					{
-						toTempFile.println(tempCache);
-						tempCache = frS.nextLine();
-						
+						dos.writeUTF(tempCache);
+						tempCache = dis.readLine();
 					}
 
 					//get the date here
