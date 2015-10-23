@@ -101,14 +101,14 @@ public class WebProxy {
 					while(!tempCache.toLowerCase().contains("date:"))
 					{
 						toTempFile.println(tempCache);
+						System.out.println(tempCache);
 						tempCache = frS.nextLine();
-						
 					}
 
 
 					//get the date here
 					String dateHeader[] = tempCache.split(":");
-					String date = dateHeader[1]+ ":" + dateHeader[2] + ":" +dateHeader[3];
+					String date = dateHeader[1]+ ":" + dateHeader[2] + ":" + dateHeader[3];
 					
 					//send to the server header
 					PrintWriter toServer = null;
@@ -144,6 +144,7 @@ public class WebProxy {
 
 					String requestMsg = method + " " + URL + " " + version + "\n";
 					toServer.print(requestMsg);
+					System.out.print(requestMsg);
 
 					//print headers stored in scanner inClient
 					String tmp1 = inClient.nextLine();
@@ -151,40 +152,46 @@ public class WebProxy {
 					{
 						{
 							toServer.println(tmp1);
+							System.out.println(tmp1);
 							tmp1 = inClient.nextLine();
 						}
 					}
-					toServer.println("If-Modified-Since:" + date);
+					toServer.println("If-Modified-Since: " + date);
+					System.out.println("If-Modified-Since: " + date);
 					toServer.println();
+					System.out.println();
 					toServer.flush();
 
 					//receive response from server
 		//			Scanner	frServer = new Scanner(server.getInputStream());
 					DataInputStream frServer = new DataInputStream (server.getInputStream());
 					String tempFS = frServer.readLine();
+					System.out.println(tempFS);
 
 					if(tempFS.contains("304")) // can use cache
 					{
+						System.out.println("use cache");
 						//copy stuff fr tempFile into client stream
 						DataInputStream dis = new DataInputStream(new FileInputStream(f));
 						String line = dis.readLine();
-						while(!line.toLowerCase().contains("date: "))
+						while(line.length() != 0)
 						{
-							// put into client output stream
-							toClient.writeChars(line);
+							// throw
+							System.out.println(line);
+							line = dis.readLine();
 						}
 						
-						//	get the date
-						SimpleDateFormat sdf = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss z");
-						sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
-						tempCache = "Date: " + sdf.format(new Date());
-						
-						toClient.writeChars(tempCache);
-						
 						//feed into client till the end with buffered bytes
-						byte[] b = new byte[1000];
-						while(dis.read(b) != -1)
-							toClient.write(b, 0, 1000);
+						byte[] b = new byte[4096];
+						System.out.println("here");
+						int i = dis.read(b);
+						while( i != -1)
+						{
+							System.out.println("4MB; read" + i);
+							toClient.write(b, 0, i);
+							i = dis.read(b);
+						}
+							
 						
 						toClient.flush();
 						toClient.close();
@@ -193,6 +200,7 @@ public class WebProxy {
 					}
 					else
 					{
+						System.out.println("cache old");
 						//send new stream to client n cache new part
 						f.createNewFile();
 						f.delete();
